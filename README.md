@@ -1,149 +1,97 @@
-# Automatic Image Enhancement System
+# Intelligent Hybrid Image Enhancement for Smart Consumer Devices
 
-A lightweight trained automatic image enhancement system implemented in MATLAB using classical image processing techniques.
+![MATLAB](https://img.shields.io/badge/MATLAB-R2021a+-blue?logo=mathworks)
+![Python](https://img.shields.io/badge/Python-3.8+-yellow?logo=python)
+![AI Engine](https://img.shields.io/badge/AI_Engine-RealESRGAN_v0.3.0-orange)
+![Publication](https://img.shields.io/badge/Accepted-ICCE--Taiwan_(IEEE)-success)
 
-## System Overview
+> **Official codebase for the research paper:** *Intelligent Hybrid Image Enhancement for Smart Consumer Devices Using Classical and AI-Based Super-Resolution.*
 
-This system automatically enhances images based on learned statistics from a training dataset. It adapts enhancement parameters based on the characteristics of the input image compared to the training data.
+## 📖 Overview
 
-## Project Structure
+Conventional image enhancement methods often fail on severely degraded images, while state-of-the-art AI super-resolution models introduce artifacts and require high computational resources. 
 
+This repository presents a novel **Adaptive Hybrid Enhancement Framework** that intelligently bridges this gap. By utilizing resolution and variance metrics, the system automatically routes images between a lightweight classical processing pipeline (**Safe Mode**) and a heavy AI super-resolution engine (**Boost Mode**). Furthermore, the framework incorporates an explainable AI layer, generating attention difference heatmaps and zoomed ROI comparisons to validate structural stability.
+
+---
+
+## ✨ Key System Features
+
+1. **Adaptive Trigger Mechanism:** Analyzes input resolution and blur (via Laplacian variance). 
+   * *Logic:* `If (resolution < 400px AND variance >= 0.001) -> Safe Mode`, `Else -> Boost Mode`.
+2. **Safe Mode (Classical):** Applies histogram equalization, contrast stretching, and sharpening for mildly degraded images, ensuring zero artificial hallucination.
+3. **Boost Mode (AI Super-Resolution):** Seamlessly invokes the included `realesrgan-ncnn-vulkan` engine via a Python bridge for severe degradation, recovering high-frequency details.
+4. **Explainable Validation:** Automatically generates SSIM structural similarity scores and visual heatmaps to compare the original and enhanced outputs.
+
+---
+
+## 📊 Quantitative Performance
+
+The proposed framework was evaluated across 200 challenging images (DIV2K downscaled, Gaussian blur, and AWGN). The hybrid approach significantly outperformed classical-only baseline methods in maintaining structural fidelity.
+
+| Image Degradation | Original SSIM | Safe Mode SSIM | Boost Mode SSIM |
+| :--- | :---: | :---: | :---: |
+| **Low Resolution** | 0.62 | 0.71 | **0.84** |
+| **Blurred Image** | 0.58 | 0.68 | **0.82** |
+| **Noisy Image** | 0.54 | **0.73** | 0.79 |
+
+---
+
+## 📂 Project Structure
+
+```text
+DIG PROJECT (QODER)/
+│
+├── enhancement_pipeline.m          # Main entry point for the hybrid framework
+├── auto_enhancer_multi_defect.m    # Core logic for handling various degradations
+├── evaluate_multi_defect_system.m  # Batch validation and SSIM metric generation
+├── compare_enhancers.m             # Script to generate visual heatmaps and ROI comparisons
+│
+├── realesrgan_enhance.py           # Python bridge communicating with the AI engine
+├── realesrgan-ncnn-vulkan.exe      # Compiled AI super-resolution executable
+│
+└── trained_params.mat              # Saved threshold parameters for the adaptive trigger
 ```
-project_root/
-├── train.m              # Training phase script
-├── enhance.m            # Enhancement phase script  
-├── compare.m            # Comparison and evaluation script
-├── README.md            # This file
-├── trained_params.mat   # Saved trained parameters (generated)
-├── comparison_results.mat # Comparison results (generated)
-├── dataset_extracted/   # Training dataset folder
-│   └── archive/
-│       └── aerials/
-│           └── aerials/ # Place USC-SIPI aerial images here
-└── test_images/         # Test images folder
-```
+## 🚀 Quick Start Guide 
 
-## Requirements
+1. Prerequisites
+- MATLAB (R2018a or newer with Image Processing Toolbox)
 
-- MATLAB R2018a or later
-- Image Processing Toolbox
+- Python 3.8+ (Must be added to system PATH for MATLAB to execute it)
 
-## Usage Instructions
+2. Running a Single Image Enhancement
+- To process a single image and see the adaptive trigger in action, load your image into MATLAB and run the main pipeline:
 
-### 1. Training Phase
-
-First, you need to train the system using the USC-SIPI aerial dataset:
-
-1. Download the USC-SIPI aerial images dataset
-2. Place the images in: `dataset_extracted/archive/aerials/aerials/`
-3. Run the training script:
-
-```matlab
-train()
-```
-
-This will:
-- Process all images in the dataset folder
-- Compute average brightness and contrast statistics
-- Save trained parameters to `trained_params.mat`
-
-### 2. Enhancement Phase
-
-Enhance a single image using the trained system:
-
-```matlab
+Matlab
+```text
 % Load your test image
-test_img = imread('path/to/your/image.jpg');
+input_img = imread('path/to/degraded_image.jpg');
 
-% Apply enhancement
-enhanced_img = enhance(test_img);
+% Run the hybrid enhancement pipeline
+[enhanced_img, active_mode, ssim_score] = enhancement_pipeline(input_img);
 
-% Display results
-figure;
-subplot(1,2,1); imshow(test_img); title('Original');
-subplot(1,2,2); imshow(enhanced_img); title('Enhanced');
+% Display the results
+disp(['System selected: ', active_mode]);
+disp(['Structural Similarity (SSIM): ', num2str(ssim_score)]);
+3. Running the Validation Suite
+To reproduce the quantitative results from the paper, use the built-in evaluation script:
+
+
+% Run full comparison against standard baselines
+evaluate_multi_defect_system();
+
+% Generate visual heatmaps for explainability
+compare_enhancers('path/to/test_image.jpg');
 ```
 
-### 3. Comparison Phase
+## 🎓 Citation
+If you use this framework or find our research helpful, please cite our IEEE publication:
 
-Compare the proposed method against baseline methods:
-
-```matlab
-% Compare methods on a test image
-compare('path/to/test/image.jpg');
-```
-
-This will:
-- Apply histogram equalization (baseline)
-- Apply CLAHE (baseline) 
-- Apply proposed adaptive method
-- Compute PSNR and MSE metrics
-- Display side-by-side visualization
-- Save results to `comparison_results.mat`
-
-## System Features
-
-### Adaptive Enhancement Logic
-
-The system makes intelligent decisions based on image statistics:
-
-1. **Brightness Analysis**: 
-   - If image brightness < (dataset_avg - 0.5 × dataset_std): Apply brightness enhancement
-   - Otherwise: No brightness adjustment
-
-2. **Contrast Analysis**:
-   - If image contrast < (dataset_avg - 0.5 × dataset_std): Apply CLAHE
-   - Otherwise: No contrast enhancement
-
-3. **Always Applied**:
-   - Median filtering for noise reduction
-   - Sharpening for improved clarity
-
-### Evaluation Metrics
-
-- **PSNR (Peak Signal-to-Noise Ratio)**: Higher is better
-- **MSE (Mean Squared Error)**: Lower is better
-
-## Example Workflow
-
-```matlab
-% 1. Training (do this once)
-train()
-
-% 2. Enhancement
-img = imread('test_images/sample.jpg');
-enhanced = enhance(img);
-imshow(enhanced);
-
-% 3. Comparison with baselines
-compare('test_images/sample.jpg');
-```
-
-## Customization
-
-You can modify the enhancement parameters in `enhance.m`:
-
-- Brightness adjustment factor limits
-- CLAHE clip limit
-- Median filter size
-- Sharpening parameters
-
-## Notes
-
-- The system works with both grayscale and RGB images
-- All processing is converted to grayscale internally for consistency
-- Results are saved as 8-bit unsigned integers (uint8)
-- The system is lightweight and doesn't require deep learning frameworks
-
-## Troubleshooting
-
-**Error: "Dataset folder not found"**
-- Ensure USC-SIPI images are in the correct folder structure
-- Check that `dataset_extracted/archive/aerials/aerials/` exists
-
-**Error: "Trained parameters file not found"**
-- Run `train()` first to generate `trained_params.mat`
-
-**Poor enhancement results**
-- Try adjusting the threshold parameters in `enhance.m`
-- Consider retraining with a different dataset
+Code snippet
+@inproceedings{passi2026hybridimage,
+  title={Intelligent Hybrid Image Enhancement for Smart Consumer Devices Using Classical and AI-Based Super-Resolution},
+  author={Passi, Viren and others},
+  booktitle={2026 IEEE International Conference on Consumer Electronics-Taiwan (ICCE-Taiwan)},
+  year={2026},
+  organization={IEEE}
+}
